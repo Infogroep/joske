@@ -1,4 +1,4 @@
-eddy
-====
+Joske
+=====
 
-Eddy is the experimental IRC bot for the Infogroup IRC channel.
+Joske is the experimental IRC bot for the Infogroep IRC channel.
