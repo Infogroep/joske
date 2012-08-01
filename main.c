@@ -1,13 +1,17 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
 #include <libircclient.h>
 
 #define BOTNAME "joske"
-#define IRCSERVER "irc.krey.net"
+#define SERVER "irc.krey.net"
+#define CHANNEL "#infogroep"
+
 #define dprintf(format, ...) fprintf(stderr, format, __VA_ARGS__)
 
+// irc_event_callback_t
 static void IG_event_handler(irc_session_t * session, const char * event,
 		const char * origin, const char ** params, unsigned count) {
 
@@ -24,7 +28,7 @@ static void IG_event_handler(irc_session_t * session, const char * event,
 	dprintf("%s", "\n");
 	//
 
-	static const char * channel = "#infogroep";
+	static const char * channel = CHANNEL;
 
 	if (0 == strcmp("CONNECT", event)) {
 		dprintf("Joining %s\n", channel);
@@ -55,6 +59,7 @@ static void IG_event_handler(irc_session_t * session, const char * event,
 	dprintf("Event '%s' not handled\n", event);
 }
 
+// irc_eventcode_callback_t
 static void IG_eventcode_handler(irc_session_t * session, unsigned int event,
 		const char * origin, const char ** params, unsigned int count) {
 	//
@@ -71,16 +76,19 @@ static void IG_eventcode_handler(irc_session_t * session, unsigned int event,
 	//
 }
 
+// irc_event_dcc_chat_t
 static void IG_dcc_chat_handler(irc_session_t * session, const char * nick,
 		const char * addr, irc_dcc_t dccid) {
 	dprintf("%s\n", "DCC CHAT REQUEST IGNORED");
 }
 
+// irc_event_dcc_send_t
 static void IG_dcc_send_handler(irc_session_t * session, const char * nick,
 		const char * addr, const char * filename, unsigned long size, irc_dcc_t dccid) {
 	dprintf("%s\n", "DCC SEND REQUEST IGNORED");
 }
 
+// connect to server and wait for someone make the bot quit
 int main(void) {
 	irc_callbacks_t IGcallbacks;
 	irc_session_t * IGsession;
@@ -109,16 +117,34 @@ int main(void) {
 	IGcallbacks.event_dcc_send_req = &IG_dcc_send_handler;
 
 	dprintf("%s\n", "Starting Up");
+
 	dprintf("%s\n", "Creating Session");
-	IGsession = irc_create_session(&IGcallbacks);
+	if (!(IGsession = irc_create_session(&IGcallbacks))) {
+		fprintf(stderr, "ERROR: failure creating IRC session (%s)\n",
+				irc_strerror(irc_errno(IGsession)));
+		exit(EXIT_FAILURE);
+	}
+	
 	dprintf("%s\n", "Setting Up Session");
-	irc_option_set(IGsession, LIBIRC_OPTION_DEBUG);
+	irc_option_set(IGsession, LIBIRC_OPTION_DEBUG); // void
+	
 	dprintf("%s\n", "Connecting To IRC Server");
-	irc_connect(IGsession, IRCSERVER, 6667, NULL, BOTNAME, BOTNAME, BOTNAME);
+	if (irc_connect(IGsession, SERVER, 6667, NULL, BOTNAME, BOTNAME, BOTNAME)) {
+		fprintf(stderr, "ERROR: failure connecting to IRC server (%s)\n",
+				irc_strerror(irc_errno(IGsession)));
+		exit(EXIT_FAILURE);
+	}
+	
 	dprintf("%s\n", "Running Main Event Loop");
-	irc_run(IGsession);
+	if (irc_run(IGsession)) {
+		fprintf(stderr, "ERROR: failure running main event loop (%s)\n",
+				irc_strerror(irc_errno(IGsession)));
+		exit(EXIT_FAILURE);
+	}
+	
 	dprintf("%s\n", "Destroying Session");
-	irc_destroy_session(IGsession);
+	irc_destroy_session(IGsession); // void
+	
 	dprintf("%s\n", "Shutting Down");
 	return 0;
 }

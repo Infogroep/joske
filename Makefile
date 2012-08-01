@@ -7,15 +7,21 @@ CWARNINGS=-W -Wall -Wextra -Wundef -Wendif-labels -Wshadow\
 					-Wpointer-arith -Wbad-function-cast -Wcast-align\
 					-Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes\
 					-Wnested-externs -Winline -Wdisabled-optimization\
-					-Wno-missing-field-initializers
+					-Wno-missing-field-initializers -Wno-unused
 CFLAGS:=-g -O0 -pipe -pedantic -std=c99 -D_POSIX_C_SOURCE=200809L\
 				$(CWARNINGS) $(CFLAGS)
 
-CFLAGS+=-I/usr/include/libircclient
-LDLIBS+=-lircclient
+# TODO clean up libircclient hackery :)
+LIBIRCCLIENT_LOCAL=libircclient/src/libircclient.o
 
-$(PROGRAM): $(SOURCES)
+CFLAGS+=-Ilibircclient/include
+LDLIBS+=-Llibircclient/src -lircclient
+
+$(PROGRAM): $(SOURCES) | $(LIBIRCCLIENT_LOCAL)
 	$(CC) $(CFLAGS) $^ $(LDLIBS) -o $@
+
+$(LIBIRCCLIENT_LOCAL):
+	./getlibircclient.sh
 
 test: $(PROGRAM)
 	./$<
@@ -29,4 +35,7 @@ macrotest: $(SOURCES)
 clean:
 	rm -f $(PROGRAM)
 
-.PHONY: run clean
+veryclean: clean
+	rm -rf libircclient/
+
+.PHONY: run clean veryclean
